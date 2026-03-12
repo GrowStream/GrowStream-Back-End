@@ -1,0 +1,1 @@
+# Fix TypeScript Errors in upload.controller.ts&#10;&#10;## Steps:&#10;1. [ ] Add `import { join } from 'path';` to imports.&#10;2. [ ] Replace 5 `destination` values with static `join(process.cwd(), ...)` paths and remove `!`.&#10;3. [ ] Verify compilation errors are gone.&#10;4. [ ] Mark complete.
