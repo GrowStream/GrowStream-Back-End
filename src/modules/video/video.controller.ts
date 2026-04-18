@@ -25,7 +25,7 @@ export class VideoController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a new video' })
   async create(@Request() req: any, @Body() createVideoDto: any) {
-    return this.videoService.create(req.user.channelId, createVideoDto);
+    return this.videoService.create(req.user.id, createVideoDto);
   }
 
   @Get()

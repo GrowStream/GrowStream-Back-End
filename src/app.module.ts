@@ -14,6 +14,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { SearchModule } from './modules/search/search.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { ClipModule } from './modules/clip/clip.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { staticConfig } from './config/static.config';
 
@@ -81,6 +82,7 @@ import { staticConfig } from './config/static.config';
     NotificationModule,
     SearchModule,
     GatewayModule,
+    ClipModule,
   ],
   providers: [
     {

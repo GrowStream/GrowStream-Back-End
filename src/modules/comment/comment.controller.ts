@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CommentService } from './comment.service';
@@ -12,8 +12,11 @@ export class CommentController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Add a comment' })
-  async create(@Body() body: { videoId: string; text: string }, @Request() req: any) {
-    return this.commentService.create(body.videoId, req.user.id, body.text);
+  async create(
+    @Body() body: { videoId: string; text: string; parentId?: string },
+    @Request() req: any,
+  ) {
+    return this.commentService.create(body.videoId, req.user.id, body.text, body.parentId);
   }
 
   @Get('video/:videoId')
@@ -37,5 +40,13 @@ export class CommentController {
   async delete(@Param('id') id: string, @Request() req: any) {
     return this.commentService.delete(id, req.user.id);
   }
-}
 
+  @Post(':id/like')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Toggle like on a comment' })
+  async likeComment(@Param('id') id: string, @Request() req: any) {
+    return this.commentService.likeComment(id, req.user.id);
+  }
+}
