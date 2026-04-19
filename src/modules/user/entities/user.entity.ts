@@ -57,6 +57,12 @@ export class User {
   @Column({ nullable: true })
   lastLoginAt: Date;
 
+  @Column({ nullable: true })
+  resetToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetTokenExpires: Date;
+
   @OneToMany(() => Channel, (channel) => channel.user)
   channels: Channel[];
 

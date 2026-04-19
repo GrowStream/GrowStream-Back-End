@@ -1,10 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import { User } from '../user/entities/user.entity';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -143,8 +144,47 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    // In a more advanced implementation, you would blacklist the token
     return { message: 'Logged out successfully' };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email: dto.email } });
+
+    // Always return the same message to prevent user enumeration
+    const successMsg = { message: 'If that email exists, a reset link has been sent.' };
+    if (!user) return successMsg;
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    user.resetToken = resetToken;
+    user.resetTokenExpires = resetTokenExpires;
+    await this.userRepository.save(user);
+
+    const baseUrl = this.configService.get('APP_URL', 'http://localhost:3000');
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+
+    // Log to console in dev (wire up nodemailer/SMTP when ready)
+    console.log(`[Password Reset] ${user.email} → ${resetUrl}`);
+
+    return successMsg;
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { resetToken: dto.token },
+    });
+
+    if (!user || !user.resetTokenExpires || user.resetTokenExpires < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    user.password = dto.newPassword; // BeforeUpdate hook will hash it
+    user.resetToken = null;
+    user.resetTokenExpires = null;
+    await this.userRepository.save(user);
+
+    return { message: 'Password reset successfully' };
   }
 }
 

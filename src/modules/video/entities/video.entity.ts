@@ -27,6 +27,9 @@ export class Video {
   @Column({ nullable: true })
   thumbnail: string;
 
+  @Column({ nullable: true })
+  videoUrl: string; // URL of the original uploaded file
+
   @Column({ type: 'int', default: 0 })
   duration: number; // in seconds
 

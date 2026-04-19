@@ -1,6 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Video } from '../../video/entities/video.entity';
+import { CommentLike } from './comment-like.entity';
 
 @Entity('comments')
 export class Comment {
@@ -19,6 +20,9 @@ export class Comment {
   @Column({ type: 'uuid', nullable: true })
   parentId: string | null;
 
+  @Column({ default: 0 })
+  likesCount: number;
+
   @ManyToOne(() => Video, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'videoId' })
   video: Video;
@@ -26,6 +30,9 @@ export class Comment {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @OneToMany(() => CommentLike, (cl) => cl.comment)
+  commentLikes: CommentLike[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -6,16 +6,17 @@ import { VideoView } from './entities/video-view.entity';
 import { VideoTag } from './entities/video-tag.entity';
 import { VideoService } from './video.service';
 import { VideoController } from './video.controller';
+import { HlsService } from './hls.service';
+import { Channel } from '../channel/entities/channel.entity';
 import { ChannelModule } from '../channel/channel.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Video, VideoFile, VideoView, VideoTag]),
+    TypeOrmModule.forFeature([Video, VideoFile, VideoView, VideoTag, Channel]),
     forwardRef(() => ChannelModule),
   ],
   controllers: [VideoController],
-  providers: [VideoService],
-  exports: [VideoService],
+  providers: [VideoService, HlsService],
+  exports: [VideoService, HlsService],
 })
 export class VideoModule {}
-
