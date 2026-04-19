@@ -5,6 +5,9 @@ import { User } from './entities/user.entity';
 import { Video } from '../video/entities/video.entity';
 import { Clip } from '../clip/clip.entity';
 import { Channel } from '../channel/entities/channel.entity';
+import { LiveStream } from '../live/entities/live-stream.entity';
+import { Post } from '../post/entities/post.entity';
+import { Collaboration } from '../collaboration/entities/collaboration.entity';
 
 @Injectable()
 export class UserService {
@@ -17,6 +20,12 @@ export class UserService {
     private clipRepository: Repository<Clip>,
     @InjectRepository(Channel)
     private channelRepository: Repository<Channel>,
+    @InjectRepository(LiveStream)
+    private liveStreamRepository: Repository<LiveStream>,
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(Collaboration)
+    private collabRepository: Repository<Collaboration>,
   ) {}
 
   async findById(id: string): Promise<User> {
@@ -47,35 +56,65 @@ export class UserService {
     await this.userRepository.remove(user);
   }
 
-  async getContent(
-    userId: string,
-    type: 'videos' | 'clips' = 'videos',
-    page = 1,
-    limit = 50,
-  ): Promise<{ items: any[]; total: number; type: string }> {
+  async getContent(userId: string, type = 'videos', page = 1, limit = 10) {
     const channel = await this.channelRepository.findOne({ where: { userId } });
-    if (!channel) throw new NotFoundException('No channel found for this user');
+    if (!channel) throw new NotFoundException('Channel not found');
 
     const channelId = channel.id;
-    const skip = (page - 1) * limit;
+    const numericPage = Number(page) || 1;
+    const numericLimit = Number(limit) || 10;
+    const skip = (numericPage - 1) * numericLimit;
 
-    if (type === 'clips') {
-      const [items, total] = await this.clipRepository.findAndCount({
-        where: { channelId },
-        order: { createdAt: 'DESC' },
-        skip,
-        take: limit,
-      });
-      return { items, total, type };
+    let items = [];
+    let total = 0;
+
+    switch (type) {
+      case 'clips':
+        [items, total] = await this.clipRepository.findAndCount({
+          where: { channelId },
+          order: { createdAt: 'DESC' },
+          skip,
+          take: numericLimit,
+        });
+        break;
+      case 'live':
+        [items, total] = await this.liveStreamRepository.findAndCount({
+          where: { channelId },
+          order: { createdAt: 'DESC' },
+          skip,
+          take: numericLimit,
+        });
+        break;
+      case 'posts':
+        [items, total] = await this.postRepository.findAndCount({
+          where: { channelId },
+          order: { createdAt: 'DESC' },
+          skip,
+          take: numericLimit,
+        });
+        break;
+      case 'collaborations':
+        [items, total] = await this.collabRepository.findAndCount({
+          where: [
+            { requesterChannelId: channelId },
+            { targetChannelId: channelId }
+          ],
+          relations: ['requesterChannel', 'targetChannel'],
+          order: { createdAt: 'DESC' },
+          skip,
+          take: numericLimit,
+        });
+        break;
+      default: // videos
+        [items, total] = await this.videoRepository.findAndCount({
+          where: { channelId },
+          relations: ['files'],
+          order: { createdAt: 'DESC' },
+          skip,
+          take: numericLimit,
+        });
     }
 
-    // Default: videos
-    const [items, total] = await this.videoRepository.findAndCount({
-      where: { channelId },
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
     return { items, total, type };
   }
 }

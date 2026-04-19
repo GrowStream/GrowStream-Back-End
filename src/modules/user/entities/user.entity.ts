@@ -57,11 +57,11 @@ export class User {
   @Column({ nullable: true })
   lastLoginAt: Date;
 
-  @Column({ nullable: true })
-  resetToken: string;
+  @Column({ type: 'varchar', nullable: true })
+  resetToken: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  resetTokenExpires: Date;
+  resetTokenExpires: Date | null;
 
   @OneToMany(() => Channel, (channel) => channel.user)
   channels: Channel[];

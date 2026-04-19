@@ -32,6 +32,20 @@ export class ClipController {
     return this.clipService.findAll({ page, limit, channelId });
   }
 
+  @Get('trending')
+  @ApiOperation({ summary: 'Get trending clips' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getTrending(@Query('limit') limit?: number) {
+    return this.clipService.getTrending(limit);
+  }
+
+  @Get('recent')
+  @ApiOperation({ summary: 'Get recent clips' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getRecent(@Query('limit') limit?: number) {
+    return this.clipService.getRecent(limit);
+  }
+
   @Get('channel/:channelId')
   @ApiOperation({ summary: 'Get clips by channel ID' })
   async findByChannelId(@Param('channelId') channelId: string) {

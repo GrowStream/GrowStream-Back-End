@@ -72,6 +72,9 @@ export class Video {
   @Column({ nullable: true })
   note: string; // Schedule note
 
+  @Column({ type: 'timestamp', nullable: true })
+  endTime: Date;
+
   @ManyToOne(() => Channel, (channel) => channel.videos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'channelId' })
   channel: Channel;

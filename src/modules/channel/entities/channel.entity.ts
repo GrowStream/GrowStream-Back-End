@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 import { Video } from '../../video/entities/video.entity';
+import { Subscription } from './subscription.entity';
 
 @Entity('channels')
 export class Channel {
@@ -50,10 +51,12 @@ export class Channel {
   @OneToMany(() => Video, (video) => video.channel)
   videos: Video[];
 
+  @OneToMany(() => Subscription, (sub) => sub.channel)
+  subscriptions: Subscription[];
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
 }
-

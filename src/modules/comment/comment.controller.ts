@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { CommentService } from './comment.service';
@@ -11,42 +11,34 @@ export class CommentController {
   @Post()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Add a comment' })
-  async create(
-    @Body() body: { videoId: string; text: string; parentId?: string },
-    @Request() req: any,
-  ) {
-    return this.commentService.create(body.videoId, req.user.id, body.text, body.parentId);
+  @ApiOperation({ summary: 'Post a comment (video or clip)' })
+  async create(@Request() req: any, @Body() dto: any) {
+    return this.commentService.create(req.user.id, dto);
   }
 
   @Get('video/:videoId')
-  @ApiOperation({ summary: 'Get comments by video ID' })
-  async findByVideoId(@Param('videoId') videoId: string) {
+  @ApiOperation({ summary: 'Get comments for a video' })
+  async getByVideo(@Param('videoId') videoId: string) {
     return this.commentService.findByVideoId(videoId);
   }
 
-  @Put(':id')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update comment' })
-  async update(@Param('id') id: string, @Body() body: { text: string }, @Request() req: any) {
-    return this.commentService.update(id, req.user.id, body.text);
+  @Get('clip/:clipId')
+  @ApiOperation({ summary: 'Get comments for a clip' })
+  async getByClip(@Param('clipId') clipId: string) {
+    return this.commentService.findByClipId(clipId);
+  }
+
+  @Get('replies/:parentId')
+  @ApiOperation({ summary: 'Get replies for a comment' })
+  async getReplies(@Param('parentId') parentId: string) {
+    return this.commentService.findReplies(parentId);
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Delete comment' })
-  async delete(@Param('id') id: string, @Request() req: any) {
-    return this.commentService.delete(id, req.user.id);
-  }
-
-  @Post(':id/like')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Toggle like on a comment' })
-  async likeComment(@Param('id') id: string, @Request() req: any) {
-    return this.commentService.likeComment(id, req.user.id);
+  @ApiOperation({ summary: 'Delete a comment' })
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.commentService.remove(id, req.user.id);
   }
 }

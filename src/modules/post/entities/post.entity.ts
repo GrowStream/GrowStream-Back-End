@@ -3,43 +3,28 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
-  OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { Channel } from '../channel/entities/channel.entity';
+import { Channel } from '../../channel/entities/channel.entity';
 
-@Entity('clips')
-export class Clip {
+@Entity('posts')
+export class Post {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
-  description: string;
+  @Column({ type: 'text' })
+  content: string;
 
   @Column({ nullable: true })
-  videoUrl: string;
-
-  @Column({ nullable: true })
-  thumbnail: string;
-
-  @Column({ default: 'pending' })
-  status: 'pending' | 'processing' | 'ready' | 'failed';
+  imageUrl: string;
 
   @Column({ default: 0 })
   likesCount: number;
 
   @Column({ default: 0 })
-  dislikesCount: number;
-
-  @Column({ default: 0 })
-  viewsCount: number;
-
-  @Column({ default: 0 })
   commentsCount: number;
-
-  @Column({ nullable: true })
-  hlsUrl: string;
 
   @ManyToOne(() => Channel, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'channelId' })
@@ -50,4 +35,7 @@ export class Clip {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

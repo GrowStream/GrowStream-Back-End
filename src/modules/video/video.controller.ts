@@ -55,6 +55,16 @@ export class VideoController {
     return this.videoService.getRecentVideos(limit);
   }
 
+  @Get('related/:id')
+  @ApiOperation({ summary: 'Get related videos' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getRelated(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.videoService.getRelatedVideos(id, limit);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get video by ID' })
   async findById(@Param('id') id: string) {

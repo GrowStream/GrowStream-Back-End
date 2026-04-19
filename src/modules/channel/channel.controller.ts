@@ -54,16 +54,24 @@ export class ChannelController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Subscribe to channel' })
-  async subscribe(@Param('id') id: string) {
-    return this.channelService.subscribe(id);
+  async subscribe(@Param('id') id: string, @Request() req: any) {
+    return this.channelService.subscribe(id, req.user.id);
   }
 
   @Post(':id/unsubscribe')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Unsubscribe from channel' })
-  async unsubscribe(@Param('id') id: string) {
-    return this.channelService.unsubscribe(id);
+  async unsubscribe(@Param('id') id: string, @Request() req: any) {
+    return this.channelService.unsubscribe(id, req.user.id);
+  }
+
+  @Get(':id/is-subscribed')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Check if user is subscribed' })
+  async isSubscribed(@Param('id') id: string, @Request() req: any) {
+    return this.channelService.isSubscribed(id, req.user.id);
   }
 }
 
