@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { join } from 'path';
+import { Repository, Not } from 'typeorm';
+import { join, isAbsolute } from 'path';
 import { Video } from './entities/video.entity';
 import { VideoFile } from './entities/video-file.entity';
 import { VideoView } from './entities/video-view.entity';
@@ -23,30 +23,32 @@ export class VideoService {
   ) {}
 
   async create(userId: string, createVideoDto: any): Promise<Video> {
-    // Look up the user's channel (one channel per user)
     const channel = await this.channelRepository.findOne({ where: { userId } });
     if (!channel) {
       throw new NotFoundException('No channel found. Please create a channel first.');
     }
 
+    const sanitizedData = { ...createVideoDto };
+    const dateFields = ['scheduledAt', 'publishedAt', 'endTime'];
+    dateFields.forEach(field => {
+      if (sanitizedData[field] === '') {
+        sanitizedData[field] = null;
+      }
+    });
+
     const video = await this.videoRepository.save({
-      ...createVideoDto,
+      ...sanitizedData,
       channelId: channel.id,
       status: 'pending',
     });
 
-    // If the request included the local file path, start HLS conversion async
     if (createVideoDto.videoFilePath) {
-      const inputPath = join(process.cwd(), createVideoDto.videoFilePath.replace(/^\//, ''));
-      // Auto-extract thumbnail if none provided
-      if (!video.thumbnail) {
-        this.hlsService
-          .extractThumbnail(video.id, inputPath)
-          .then((thumbUrl) => this.videoRepository.update(video.id, { thumbnail: thumbUrl }))
-          .catch((err) => console.error('Thumbnail extraction failed:', err.message));
-      }
-      // HLS conversion (fire and forget)
-      this.hlsService.processVideo(video.id, inputPath).catch(() => {});
+      const rawPath = createVideoDto.videoFilePath.replace(/^\//, '');
+      const inputPath = isAbsolute(rawPath) ? rawPath : join(process.cwd(), rawPath);
+
+      this.hlsService.processVideo(video.id, inputPath).catch((err) => {
+        console.error(`[VideoService] Trigger failed for ${video.id}:`, err.message);
+      });
     }
 
     return video;
@@ -58,11 +60,14 @@ export class VideoService {
     channelId?: string;
     visibility?: string;
   }): Promise<{ videos: Video[]; total: number }> {
-    const { page = 1, limit = 10, channelId, visibility } = options || {};
+    const page = Number(options?.page) || 1;
+    const limit = Number(options?.limit) || 10;
+    const { channelId, visibility } = options || {};
 
     const queryBuilder = this.videoRepository
       .createQueryBuilder('video')
       .leftJoinAndSelect('video.channel', 'channel')
+      .leftJoinAndSelect('video.files', 'files')
       .orderBy('video.createdAt', 'DESC');
 
     if (channelId) {
@@ -72,6 +77,9 @@ export class VideoService {
     queryBuilder.andWhere('video.visibility = :visibility', {
       visibility: visibility || 'public',
     });
+
+    // FIX 3: Only return fully processed videos on the landing page
+    queryBuilder.andWhere('video.status = :status', { status: 'ready' });
 
     const total = await queryBuilder.getCount();
     const videos = await queryBuilder
@@ -146,9 +154,23 @@ export class VideoService {
     });
   }
 
+  async getRelatedVideos(videoId: string, limit = 12): Promise<Video[]> {
+    return this.videoRepository.find({
+      where: {
+        id: Not(videoId),
+        visibility: 'public',
+        status: 'ready',
+      },
+      relations: ['channel'],
+      order: { viewsCount: 'DESC' },
+      take: limit,
+    });
+  }
+
+  // FIX 2: Changed status from 'published' to 'ready' in both methods below
   async getTrendingVideos(limit = 10): Promise<Video[]> {
     return this.videoRepository.find({
-      where: { visibility: 'public', status: 'published' },
+      where: { visibility: 'public', status: 'ready' },
       relations: ['channel'],
       order: { viewsCount: 'DESC' },
       take: limit,
@@ -157,7 +179,7 @@ export class VideoService {
 
   async getRecentVideos(limit = 10): Promise<Video[]> {
     return this.videoRepository.find({
-      where: { visibility: 'public', status: 'published' },
+      where: { visibility: 'public', status: 'ready' },
       relations: ['channel'],
       order: { publishedAt: 'DESC' },
       take: limit,

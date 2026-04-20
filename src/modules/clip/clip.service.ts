@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { join } from 'path';
+import { join, isAbsolute } from 'path';
 import { Clip } from './clip.entity';
 import { Channel } from '../channel/entities/channel.entity';
 import { HlsService } from '../video/hls.service';
@@ -20,23 +20,23 @@ export class ClipService {
     const channel = await this.channelRepository.findOne({ where: { userId } });
     if (!channel) throw new NotFoundException('No channel found. Please create a channel first.');
 
-    const clip = await this.clipRepository.save(
+    const clip = (await this.clipRepository.save(
       this.clipRepository.create({ ...createDto, channelId: channel.id, status: 'pending' }),
-    );
+    )) as unknown as Clip;
 
     // Trigger HLS conversion and thumbnail extraction if file path provided
     if (createDto.videoFilePath) {
-      const inputPath = join(process.cwd(), createDto.videoFilePath.replace(/^\//, ''));
+      const rawPath = createDto.videoFilePath.replace(/^\//, '');
+      const inputPath = isAbsolute(rawPath) ? rawPath : join(process.cwd(), rawPath);
 
       if (!clip.thumbnail) {
         this.hlsService
           .extractThumbnail(clip.id, inputPath)
           .then((thumbUrl) => this.clipRepository.update(clip.id, { thumbnail: thumbUrl }))
-          .catch((err) => console.error('Clip thumbnail extraction failed:', err.message));
+          .catch((err: Error) => console.error('Clip thumbnail extraction failed:', err.message));
       }
 
-      // HLS conversion — updates clip via direct repository call won't work
-      // since HlsService targets videos table. We handle the clip separately below.
+      // HLS conversion
       this.convertClipToHLS(clip.id, inputPath).catch(() => {});
     }
 
@@ -49,40 +49,67 @@ export class ClipService {
     const ffmpeg = require('fluent-ffmpeg');
 
     try {
+      console.log(`Starting HLS processing for clip ${clipId} at ${inputPath}`);
       await this.clipRepository.update(clipId, { status: 'processing' });
 
       const hlsDir = pathJoin(process.cwd(), 'uploads', 'hls', 'clips', clipId);
       if (!existsSync(hlsDir)) mkdirSync(hlsDir, { recursive: true });
 
       const outputM3u8 = pathJoin(hlsDir, 'index.m3u8');
+      const appUrl = process.env.APP_URL || 'http://localhost:3000';
+      const hlsUrl = `${appUrl}/uploads/hls/clips/${clipId}/index.m3u8`;
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)
           .videoCodec('libx264')
           .audioCodec('aac')
           .outputOptions([
-            '-preset fast',
-            '-crf 23',
+            '-preset', 'fast',
+            '-crf', '23',
             '-vf', 'scale=-2:1080',
-            '-hls_time 4',
-            '-hls_playlist_type vod',
+            '-hls_time', '4',
+            '-hls_playlist_type', 'vod',
             '-hls_segment_filename', pathJoin(hlsDir, 'segment%03d.ts'),
-            '-f hls',
+            '-f', 'hls',
           ])
           .output(outputM3u8)
-          .on('end', () => resolve())
-          .on('error', (err) => reject(err))
+          .on('end', () => {
+              console.log(`Clip HLS conversion finished for ${clipId}`);
+              resolve();
+          })
+          .on('error', (err: Error) => {
+              console.error(`Clip Ffmpeg error for ${clipId}:`, err.message);
+              reject(err);
+          })
           .run();
       });
 
       await this.clipRepository.update(clipId, {
         status: 'ready',
-        hlsUrl: `/uploads/hls/clips/${clipId}/index.m3u8`,
+        hlsUrl,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Clip HLS conversion failed for ${clipId}:`, err.message);
       await this.clipRepository.update(clipId, { status: 'failed' });
     }
+  }
+
+  async getTrending(limit = 20): Promise<Clip[]> {
+    return this.clipRepository.find({
+      where: { status: 'ready' },
+      relations: ['channel'],
+      order: { viewsCount: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async getRecent(limit = 20): Promise<Clip[]> {
+    return this.clipRepository.find({
+      where: { status: 'ready' },
+      relations: ['channel'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
   }
 
   async findAll(options?: { page?: number; limit?: number; channelId?: string }): Promise<{ clips: Clip[]; total: number }> {

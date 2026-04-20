@@ -15,6 +15,9 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { SearchModule } from './modules/search/search.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { ClipModule } from './modules/clip/clip.module';
+import { LiveModule } from './modules/live/live.module';
+import { PostModule } from './modules/post/post.module';
+import { CollaborationModule } from './modules/collaboration/collaboration.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { staticConfig } from './config/static.config';
 
@@ -26,7 +29,6 @@ import { staticConfig } from './config/static.config';
     }),
     // Configuration
     ConfigModule.forRoot({
-
       isGlobal: true,
       envFilePath: '.env',
     }),
@@ -83,6 +85,9 @@ import { staticConfig } from './config/static.config';
     SearchModule,
     GatewayModule,
     ClipModule,
+    LiveModule,
+    PostModule,
+    CollaborationModule,
   ],
   providers: [
     {
@@ -92,4 +97,3 @@ import { staticConfig } from './config/static.config';
   ],
 })
 export class AppModule {}
-

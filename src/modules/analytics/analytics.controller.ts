@@ -22,6 +22,14 @@ export class AnalyticsController {
     return this.analyticsService.getChannelAnalytics(channelId);
   }
 
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get current user channel analytics' })
+  async getMyAnalytics(@Request() req: any) {
+    return this.analyticsService.getMyChannelAnalytics(req.user.id);
+  }
+
   @Get('user')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth('JWT-auth')

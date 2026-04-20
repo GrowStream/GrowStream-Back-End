@@ -161,8 +161,8 @@ export class AuthService {
     user.resetTokenExpires = resetTokenExpires;
     await this.userRepository.save(user);
 
-    const baseUrl = this.configService.get('APP_URL', 'http://localhost:3000');
-    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'http://localhost:5173');
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     // Log to console in dev (wire up nodemailer/SMTP when ready)
     console.log(`[Password Reset] ${user.email} → ${resetUrl}`);

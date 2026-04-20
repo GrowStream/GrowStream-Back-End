@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { VideoView } from '../video/entities/video-view.entity';
 import { Video } from '../video/entities/video.entity';
+import { Channel } from '../channel/entities/channel.entity';
 
 @Injectable()
 export class AnalyticsService {
@@ -11,6 +12,8 @@ export class AnalyticsService {
     private videoViewRepository: Repository<VideoView>,
     @InjectRepository(Video)
     private videoRepository: Repository<Video>,
+    @InjectRepository(Channel)
+    private channelRepository: Repository<Channel>,
   ) {}
 
   async getVideoAnalytics(videoId: string) {
@@ -47,6 +50,17 @@ export class AnalyticsService {
     };
   }
 
+  async getMyChannelAnalytics(userId: string) {
+    const channel = await this.channelRepository.findOne({ where: { userId } });
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const analytics = await this.getChannelAnalytics(channel.id);
+    return {
+      ...analytics,
+      subscribersCount: channel.subscribersCount,
+    };
+  }
+
   async getUserAnalytics(userId: string) {
     const views = await this.videoViewRepository.find({
       where: { userId },
@@ -58,4 +72,3 @@ export class AnalyticsService {
     };
   }
 }
-
